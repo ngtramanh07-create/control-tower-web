@@ -15,6 +15,9 @@ st.set_page_config(
 inject_css()
 
 
+WAREHOUSE_THRESHOLD = 90.0
+
+
 def show_blue_table(df: pd.DataFrame, max_height: int = 430):
     """Use blue_table when available. Fallback is kept for compatibility."""
     try:
@@ -34,7 +37,7 @@ def ensure_numeric(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
 def build_capacity_candidates(
     df: pd.DataFrame,
     truck_threshold: float = 85.0,
-    warehouse_threshold: float = 85.0,
+    warehouse_threshold: float = WAREHOUSE_THRESHOLD,
     carbon_baseline: float = 0.54,
 ) -> pd.DataFrame:
     """
@@ -42,7 +45,7 @@ def build_capacity_candidates(
 
     Logic:
     - Low truck utilization means there is room to consolidate shipments.
-    - High warehouse utilization means warehouse flow should be rebalanced.
+    - Warehouse utilization above 90% means warehouse flow should be rebalanced.
     - High carbon intensity means the route should be reviewed.
     - High risk score or ETA delay raises priority.
     - If no order triggers the strict rules, the page still shows a top watchlist
@@ -71,6 +74,7 @@ def build_capacity_candidates(
     risk_score = candidates["Total_Risk_Score"].fillna(0)
 
     candidates["Capacity_Action"] = "Monitor"
+
     candidates.loc[
         truck_gap > 0,
         "Capacity_Action",
@@ -143,6 +147,7 @@ df = ensure_numeric(
 
 with st.sidebar:
     st.markdown("### Capacity rules")
+
     truck_threshold = st.slider(
         "Under-utilized truck threshold (%)",
         min_value=70,
@@ -150,13 +155,11 @@ with st.sidebar:
         value=85,
         step=1,
     )
-    warehouse_threshold = st.slider(
-        "Warehouse pressure threshold (%)",
-        min_value=80,
-        max_value=95,
-        value=85,
-        step=1,
+
+    st.info(
+        "Warehouse rebalancing rule: trigger when Warehouse Utilization is above 90%."
     )
+
     carbon_baseline = st.number_input(
         "Carbon baseline (kg CO2/ton-km)",
         min_value=0.00,
@@ -168,7 +171,7 @@ with st.sidebar:
 candidates = build_capacity_candidates(
     df,
     truck_threshold=float(truck_threshold),
-    warehouse_threshold=float(warehouse_threshold),
+    warehouse_threshold=WAREHOUSE_THRESHOLD,
     carbon_baseline=float(carbon_baseline),
 )
 
@@ -187,8 +190,7 @@ else:
 col3.metric("Optimization watchlist", f"{len(candidates):,}")
 
 st.caption(
-    "Warehouse Utilization is managed against a target range of around 80-85% "
-    "to avoid congestion while maintaining capacity efficiency."
+    "Warehouse Utilization is monitored below 90% to avoid congestion while maintaining capacity efficiency."
 )
 
 left, right = st.columns(2)
@@ -325,7 +327,7 @@ section("Decision logic")
 st.markdown(
     f"""
     - If **Truck Utilization < {truck_threshold}%**, the Control Tower reviews the order for shipment consolidation by route, temperature requirement and delivery deadline.
-    - If **Warehouse Utilization > {warehouse_threshold}%**, the Control Tower recommends warehouse flow rebalancing, cross-dock acceleration or temporary diversion to another node.
+    - If **Warehouse Utilization > 90%**, the Control Tower recommends warehouse flow rebalancing, cross-dock acceleration or temporary diversion to another node.
     - If carbon intensity is above **{carbon_baseline:.2f} kg CO2/ton-km**, the Control Tower reviews lower-emission multimodal alternatives.
     - If ETA delay or risk score increases, the Control Tower flags the order for dynamic routing and customer notification.
     """
