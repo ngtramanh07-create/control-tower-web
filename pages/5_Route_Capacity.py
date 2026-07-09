@@ -1,6 +1,6 @@
 import streamlit as st
 import plotly.express as px
-from utils.ui import inject_css, title, section, dataframe_download
+from utils.ui import inject_css, title, section, dataframe_download, blue_table
 from utils.data_loader import load_orders
 
 st.set_page_config(page_title="Route & Capacity", page_icon="ROUTE", layout="wide")
@@ -12,10 +12,9 @@ df = load_orders()
 
 col1, col2, col3 = st.columns(3)
 col1.metric("Avg truck utilization", f"{df['Truck_Utilization_pct'].mean():.1f}%" if "Truck_Utilization_pct" in df.columns else "N/A")
-col2.metric("Avg warehouse load level", f"{df['Warehouse_Utilization_pct'].mean():.1f}%" if "Warehouse_Utilization_pct" in df.columns else "N/A")
+col2.metric("Avg warehouse utilization", f"{df['Warehouse_Utilization_pct'].mean():.1f}%" if "Warehouse_Utilization_pct" in df.columns else "N/A")
 col3.metric("Consolidation candidates", f"{(df['Truck_Utilization_pct'] < 75).sum():,}" if "Truck_Utilization_pct" in df.columns else "N/A")
-st.caption("Warehouse load level is treated as a pressure KPI. Target range: approximately 80-85% to avoid congestion while maintaining capacity efficiency.")
-
+st.caption("Warehouse utilization is managed against a target range of around 80-85% to avoid congestion while maintaining capacity efficiency.")
 left, right = st.columns(2)
 with left:
     if {"Route", "Truck_Utilization_pct"}.issubset(df.columns):
@@ -36,7 +35,7 @@ if {"Route", "Carbon_Emission_kgCO2_tonkm", "Total_Risk_Score"}.issubset(df.colu
         Avg_Risk=("Total_Risk_Score", "mean"),
         Avg_Truck_Util=("Truck_Utilization_pct", "mean"),
     )
-    st.dataframe(perf.round(2), use_container_width=True)
+    blue_table(perf.round(2))
 
 section("Consolidation and rebalancing candidates")
 candidates = df.copy()
@@ -47,7 +46,7 @@ cols = [
     "Truck_Utilization_pct", "Warehouse_Utilization_pct", "Capacity_Risk", "Recommended_Action",
 ]
 cols = [c for c in cols if c in candidates.columns]
-st.dataframe(candidates[cols].head(80), use_container_width=True, height=430)
+blue_table(candidates[cols].head(80))
 dataframe_download(candidates[cols], "Download consolidation candidates", "consolidation_candidates.csv")
 
 section("Decision logic")
