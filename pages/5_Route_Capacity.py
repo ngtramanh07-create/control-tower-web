@@ -15,11 +15,12 @@ st.set_page_config(
 inject_css()
 
 
-WAREHOUSE_THRESHOLD = 90.0
+WAREHOUSE_LOWER_THRESHOLD = 80.0
+WAREHOUSE_UPPER_THRESHOLD = 90.0
 
 
 def show_blue_table(df: pd.DataFrame, max_height: int = 430):
-    """Use blue_table when available. Fallback is kept for compatibility."""
+    """Use blue_table with scroll height. Fallback is kept for older ui.py versions."""
     try:
         blue_table(df, max_height=max_height)
     except TypeError:
@@ -37,20 +38,22 @@ def ensure_numeric(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
 def build_capacity_candidates(
     df: pd.DataFrame,
     truck_threshold: float = 85.0,
-    warehouse_threshold: float = WAREHOUSE_THRESHOLD,
+    warehouse_lower_threshold: float = WAREHOUSE_LOWER_THRESHOLD,
+    warehouse_upper_threshold: float = WAREHOUSE_UPPER_THRESHOLD,
     carbon_baseline: float = 0.54,
 ) -> pd.DataFrame:
     """
-    Build a practical watchlist for load consolidation and warehouse rebalancing.
+    Build a realistic capacity optimization watchlist.
 
-    Logic:
-    - Low truck utilization means there is room to consolidate shipments.
-    - Warehouse utilization above 90% means warehouse flow should be rebalanced.
-    - High carbon intensity means the route should be reviewed.
-    - High risk score or ETA delay raises priority.
-    - If no order triggers the strict rules, the page still shows a top watchlist
-      so the dashboard is useful during demo.
+    Business logic:
+    - Warehouse Utilization 80-90% is considered the optimal operating range.
+    - Warehouse Utilization > 90% triggers rebalancing or cross-dock acceleration.
+    - Warehouse Utilization < 80% indicates under-utilized warehouse capacity.
+    - Load consolidation is recommended only when there are enough compatible shipments,
+      not only because truck utilization is low.
+    - Compatible shipments should share route, transport mode, destination and cargo type.
     """
+
     candidates = df.copy()
 
     numeric_cols = [
@@ -67,48 +70,90 @@ def build_capacity_candidates(
         if col not in candidates.columns:
             candidates[col] = 0
 
+    # Build realistic compatibility groups for consolidation.
+    # This prevents the dashboard from suggesting consolidation too easily.
+    group_cols = [
+        col
+        for col in ["Route", "Transport_Mode", "Destination", "Cargo_Type"]
+        if col in candidates.columns
+    ]
+
+    if group_cols and "Unified_Shipment_ID" in candidates.columns:
+        candidates["Compatible_Group_Size"] = (
+            candidates.groupby(group_cols)["Unified_Shipment_ID"].transform("count")
+        )
+        candidates["Compatible_Group_Weight"] = (
+            candidates.groupby(group_cols)["Weight_Ton"].transform("sum")
+        )
+    else:
+        candidates["Compatible_Group_Size"] = 1
+        candidates["Compatible_Group_Weight"] = candidates["Weight_Ton"]
+
     truck_gap = (truck_threshold - candidates["Truck_Utilization_pct"]).clip(lower=0)
-    warehouse_gap = (candidates["Warehouse_Utilization_pct"] - warehouse_threshold).clip(lower=0)
-    carbon_gap = (candidates["Carbon_Emission_kgCO2_tonkm"] - carbon_baseline).clip(lower=0)
+
+    warehouse_over_gap = (
+        candidates["Warehouse_Utilization_pct"] - warehouse_upper_threshold
+    ).clip(lower=0)
+
+    warehouse_under_gap = (
+        warehouse_lower_threshold - candidates["Warehouse_Utilization_pct"]
+    ).clip(lower=0)
+
+    carbon_gap = (
+        candidates["Carbon_Emission_kgCO2_tonkm"] - carbon_baseline
+    ).clip(lower=0)
+
     eta_delay = candidates["ETA_Variance_Hours"].clip(lower=0)
     risk_score = candidates["Total_Risk_Score"].fillna(0)
 
     candidates["Capacity_Action"] = "Monitor"
 
-    candidates.loc[
-        truck_gap > 0,
-        "Capacity_Action",
-    ] = "Consolidate load with same-route shipments"
+    # Consolidation is only recommended when compatible shipment pool is meaningful.
+    consolidation_condition = (
+        (truck_gap > 0)
+        & (candidates["Compatible_Group_Size"] >= 3)
+        & (candidates["Compatible_Group_Weight"] >= 20)
+    )
 
     candidates.loc[
-        warehouse_gap > 0,
+        consolidation_condition,
+        "Capacity_Action",
+    ] = "Review consolidation with compatible same-route shipments"
+
+    candidates.loc[
+        warehouse_over_gap > 0,
         "Capacity_Action",
     ] = "Rebalance warehouse flow or accelerate cross-dock"
 
     candidates.loc[
-        (truck_gap > 0) & (warehouse_gap > 0),
+        consolidation_condition & (warehouse_over_gap > 0),
         "Capacity_Action",
-    ] = "Consolidate load and rebalance warehouse flow"
+    ] = "Consolidate compatible loads and rebalance warehouse flow"
 
     candidates.loc[
-        (truck_gap == 0) & (warehouse_gap == 0) & (carbon_gap > 0),
+        (candidates["Capacity_Action"] == "Monitor") & (warehouse_under_gap > 0),
+        "Capacity_Action",
+    ] = "Monitor under-utilized warehouse capacity"
+
+    candidates.loc[
+        (candidates["Capacity_Action"] == "Monitor") & (carbon_gap > 0),
         "Capacity_Action",
     ] = "Review lower-emission multimodal route"
 
     candidates.loc[
-        (truck_gap == 0)
-        & (warehouse_gap == 0)
-        & (carbon_gap == 0)
+        (candidates["Capacity_Action"] == "Monitor")
         & ((risk_score >= 45) | (eta_delay > 0)),
         "Capacity_Action",
     ] = "Dynamic routing watchlist"
 
     candidates["Capacity_Priority_Score"] = (
-        truck_gap * 0.35
-        + warehouse_gap * 0.35
+        truck_gap * 0.20
+        + warehouse_over_gap * 0.35
+        + warehouse_under_gap * 0.10
         + carbon_gap * 25
-        + eta_delay * 0.8
+        + eta_delay * 0.80
         + risk_score * 0.15
+        + candidates["Compatible_Group_Size"].clip(upper=5) * 0.40
     ).round(2)
 
     strict_candidates = candidates[candidates["Capacity_Action"] != "Monitor"].copy()
@@ -118,7 +163,7 @@ def build_capacity_candidates(
             "Capacity_Priority_Score",
             ascending=False,
         ).head(30).copy()
-        strict_candidates["Capacity_Action"] = "Watchlist for capacity optimization"
+        strict_candidates["Capacity_Action"] = "Capacity optimization watchlist"
 
     return strict_candidates.sort_values(
         "Capacity_Priority_Score",
@@ -128,7 +173,7 @@ def build_capacity_candidates(
 
 title(
     "Route & Capacity Optimization",
-    "Dynamic routing, load consolidation and warehouse utilization control after Control Tower",
+    "Dynamic routing, realistic load consolidation and warehouse utilization control after Control Tower",
 )
 
 df = load_orders()
@@ -157,7 +202,8 @@ with st.sidebar:
     )
 
     st.info(
-        "Warehouse rebalancing rule: trigger when Warehouse Utilization is above 90%."
+        "Warehouse Utilization target range: 80-90%. "
+        "Above 90% may indicate congestion risk."
     )
 
     carbon_baseline = st.number_input(
@@ -171,7 +217,8 @@ with st.sidebar:
 candidates = build_capacity_candidates(
     df,
     truck_threshold=float(truck_threshold),
-    warehouse_threshold=WAREHOUSE_THRESHOLD,
+    warehouse_lower_threshold=WAREHOUSE_LOWER_THRESHOLD,
+    warehouse_upper_threshold=WAREHOUSE_UPPER_THRESHOLD,
     carbon_baseline=float(carbon_baseline),
 )
 
@@ -183,14 +230,19 @@ else:
     col1.metric("Avg truck utilization", "N/A")
 
 if "Warehouse_Utilization_pct" in df.columns:
-    col2.metric("Avg warehouse utilization", f"{df['Warehouse_Utilization_pct'].mean():.1f}%")
+    col2.metric(
+        "Avg warehouse utilization",
+        f"{df['Warehouse_Utilization_pct'].mean():.1f}%",
+    )
 else:
     col2.metric("Avg warehouse utilization", "N/A")
 
 col3.metric("Optimization watchlist", f"{len(candidates):,}")
 
 st.caption(
-    "Warehouse Utilization is monitored below 90% to avoid congestion while maintaining capacity efficiency."
+    "Warehouse Utilization is managed within an optimal range of 80-90%. "
+    "Below 80% indicates under-utilized capacity, while above 90% may signal "
+    "warehouse congestion risk."
 )
 
 left, right = st.columns(2)
@@ -202,6 +254,7 @@ with left:
             .mean()
             .sort_values("Truck_Utilization_pct", ascending=False)
         )
+
         fig = px.bar(
             route_util,
             x="Route",
@@ -225,6 +278,7 @@ with right:
             .mean()
             .sort_values("Warehouse_Utilization_pct", ascending=False)
         )
+
         fig = px.bar(
             wh,
             x="Origin",
@@ -260,7 +314,10 @@ if required_for_perf.issubset(df.columns):
     }
 
     if "Warehouse_Utilization_pct" in df.columns:
-        agg_dict["Avg_Warehouse_Utilization"] = ("Warehouse_Utilization_pct", "mean")
+        agg_dict["Avg_Warehouse_Utilization"] = (
+            "Warehouse_Utilization_pct",
+            "mean",
+        )
 
     if "Weight_Ton" in df.columns:
         agg_dict["Total_Weight_Ton"] = ("Weight_Ton", "sum")
@@ -280,19 +337,25 @@ section("Capacity Optimization Watchlist")
 
 st.markdown(
     """
-    This table identifies shipments that should be reviewed for **load consolidation**, 
+    This table identifies shipments that should be reviewed for **realistic load consolidation**, 
     **warehouse rebalancing**, **lower-emission routing**, or **dynamic routing watchlist**. 
-    It helps the Control Tower prioritize orders that can improve truck utilization, 
-    reduce warehouse pressure and support carbon reduction.
+    Consolidation is recommended only when the order has enough compatible shipments with the 
+    same route, transport mode, destination and cargo group.
     """
 )
 
-action_options = ["All"] + sorted(candidates["Capacity_Action"].dropna().astype(str).unique().tolist())
+action_options = ["All"] + sorted(
+    candidates["Capacity_Action"].dropna().astype(str).unique().tolist()
+)
+
 selected_action = st.selectbox("Filter by recommended action", action_options)
 
 display_candidates = candidates.copy()
+
 if selected_action != "All":
-    display_candidates = display_candidates[display_candidates["Capacity_Action"] == selected_action]
+    display_candidates = display_candidates[
+        display_candidates["Capacity_Action"] == selected_action
+    ]
 
 candidate_cols = [
     "Unified_Shipment_ID",
@@ -301,8 +364,11 @@ candidate_cols = [
     "Origin",
     "Destination",
     "Route",
+    "Transport_Mode",
     "Truck_Utilization_pct",
     "Warehouse_Utilization_pct",
+    "Compatible_Group_Size",
+    "Compatible_Group_Weight",
     "Carbon_Emission_kgCO2_tonkm",
     "Total_Risk_Score",
     "ETA_Variance_Hours",
@@ -316,6 +382,7 @@ if display_candidates.empty:
     st.warning("No capacity optimization candidate is available under the current filter.")
 else:
     show_blue_table(display_candidates[candidate_cols].head(80), max_height=430)
+
     dataframe_download(
         display_candidates[candidate_cols],
         "Download capacity optimization watchlist",
@@ -326,7 +393,8 @@ section("Decision logic")
 
 st.markdown(
     f"""
-    - If **Truck Utilization < {truck_threshold}%**, the Control Tower reviews the order for shipment consolidation by route, temperature requirement and delivery deadline.
+    - If **Truck Utilization < {truck_threshold}%**, the Control Tower only recommends consolidation when there are enough compatible shipments on the same route, transport mode, destination and cargo group.
+    - If **Warehouse Utilization is between 80% and 90%**, the warehouse is considered to be within the optimal operating range.
     - If **Warehouse Utilization > 90%**, the Control Tower recommends warehouse flow rebalancing, cross-dock acceleration or temporary diversion to another node.
     - If carbon intensity is above **{carbon_baseline:.2f} kg CO2/ton-km**, the Control Tower reviews lower-emission multimodal alternatives.
     - If ETA delay or risk score increases, the Control Tower flags the order for dynamic routing and customer notification.
