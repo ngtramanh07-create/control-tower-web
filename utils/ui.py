@@ -5,7 +5,47 @@ import pandas as pd
 def inject_css():
     st.markdown(
         """
-        <style>
+               .blue-table-wrap {
+            border: 1px solid #D7E3F8;
+            border-radius: 12px;
+            overflow-x: auto;
+            margin: 0.75rem 0 1.25rem 0;
+            background: white;
+        }
+
+        .blue-table-wrap table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.92rem;
+        }
+
+        .blue-table-wrap thead tr {
+            background: linear-gradient(90deg, #0B3D91, #2563EB);
+        }
+
+        .blue-table-wrap th {
+            color: white !important;
+            font-weight: 700;
+            padding: 0.8rem 0.9rem;
+            text-align: left;
+            border: 1px solid #D7E3F8;
+            white-space: nowrap;
+        }
+
+        .blue-table-wrap td {
+            color: #0F172A;
+            padding: 0.7rem 0.9rem;
+            border: 1px solid #E5EAF3;
+            vertical-align: top;
+        }
+
+        .blue-table-wrap tbody tr:nth-child(even) {
+            background: #F8FBFF;
+        }
+
+        .blue-table-wrap tbody tr:hover {
+            background: #EEF5FF;
+        } <style>
         .block-container {padding-top: 3.2rem; padding-bottom: 2rem;}
         h1 {color: #0F2A5F; font-weight: 800; line-height: 1.15; margin-top: 0;}
         .subtitle {font-size: 1rem; color: #52616B; margin-top: -0.45rem; margin-bottom: 1.2rem;}
@@ -60,7 +100,17 @@ def safe_date_filter(df, column: str):
     min_date = df[column].min().date()
     max_date = df[column].max().date()
     selected = st.date_input(f"{column} range", value=(min_date, max_date), min_value=min_date, max_value=max_date)
-    if isinstance(selected, tuple) and len(selected) == 2:
+    if isinstance(selected, tuple) and len(selected) == 2:                                                                            
+    def blue_table(df, hide_index=True):
+    html = df.to_html(index=not hide_index, escape=False)
+    st.markdown(
+        f"""
+        <div class="blue-table-wrap">
+            {html}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
         start, end = selected
         return df[(df[column].dt.date >= start) & (df[column].dt.date <= end)]
     return df
