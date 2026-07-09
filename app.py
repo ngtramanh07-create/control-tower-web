@@ -1,5 +1,5 @@
 import streamlit as st
-from utils.ui import inject_css, title, section
+from utils.ui import inject_css, title, section, blue_table
 from utils.data_loader import load_orders
 from utils.kpi_utils import (
     calculate_kpis,
@@ -92,7 +92,7 @@ st.markdown(
 with st.expander("Dataset overview"):
     st.write(f"Number of active orders: **{len(orders):,}**")
     st.write("Main dataset file: `data/SLC26C02_post_control_tower_500_orders_dataset.xlsx`")
-    st.dataframe(orders.head(20), use_container_width=True)
+    blue_table(orders.head(20))
 
 with st.expander("KPI comparison table"):
-    st.dataframe(comparison, use_container_width=True)
+    blue_table(comparison)
