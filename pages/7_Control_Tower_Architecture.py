@@ -1,5 +1,5 @@
 import streamlit as st
-from utils.ui import inject_css, title, section
+from utils.ui import inject_css, page_header, blue_table
 from utils.data_loader import load_sheet
 
 st.set_page_config(page_title="Control Tower Architecture", page_icon="ARCH", layout="wide")
@@ -21,7 +21,7 @@ st.markdown(
 section("8-layer model")
 try:
     layers = load_sheet("Control_Tower_Layers")
-    st.dataframe(layers, use_container_width=True, height=420)
+    blue_table(layer_df)
 except Exception:
     st.warning("Control_Tower_Layers sheet is not available.")
 
