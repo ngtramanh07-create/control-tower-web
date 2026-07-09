@@ -1,6 +1,6 @@
 import streamlit as st
 import plotly.express as px
-from utils.ui import inject_css, title, section, dataframe_download
+from utils.ui import inject_css, title, section, dataframe_download, blue_table
 from utils.data_loader import load_orders
 
 st.set_page_config(page_title="Alert Center", page_icon="ALERT", layout="wide")
@@ -50,7 +50,7 @@ if "Document_Risk" in df.columns:
                 "Document_Risk", "Required_Delivery_Time", "Recommended_Action",
             ]
             cols = [c for c in cols if c in medium_docs.columns]
-            st.dataframe(medium_docs[cols].head(80), use_container_width=True)
+            blue_table(medium_docs[cols].head(80), max_height=360)
 
 section("Alert distribution")
 left, right = st.columns(2)
@@ -74,7 +74,7 @@ cols = [
     "Total_Risk_Score", "Escalation_Owner", "Recommended_Action", "Customer_Notified",
 ]
 cols = [c for c in cols if c in alerts.columns]
-st.dataframe(alerts[cols], use_container_width=True, height=520)
+blue_table(alerts[cols], max_height=520)
 dataframe_download(alerts[cols], "Download active alerts", "active_alerts.csv")
 
 section("Sense - Think - Decide - Act - Learn logic")
