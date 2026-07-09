@@ -13,13 +13,13 @@ BASELINE_KPIS = {
 
 TARGET_KPIS = {
     "OTIF": 97.0,
-    "Fill Rate": 98.0,
+    "Fill Rate": 97.0,
     "Order Accuracy": 99.2,
     "Warehouse Utilization": 84.0,
     "Truck Utilization": 87.0,
     "Carbon Emission": 0.54,
     "Late Delivery Rate": 3.0,
-    "Cold Damage Rate": 0.8,
+    "Cold Damage Rate": 1.2,
 }
 
 KPI_UNITS = {

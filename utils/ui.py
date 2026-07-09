@@ -7,10 +7,10 @@ def inject_css():
         """
         <style>
         .block-container {padding-top: 3.2rem; padding-bottom: 2rem;}
-        h1 {color: #083344; font-weight: 800; line-height: 1.15; margin-top: 0;}
+        h1 {color: #0F2A5F; font-weight: 800; line-height: 1.15; margin-top: 0;}
         .subtitle {font-size: 1rem; color: #52616B; margin-top: -0.45rem; margin-bottom: 1.2rem;}
-        .section-title {font-size: 1.3rem; font-weight: 750; color: #0B3B2E; margin-top: 1rem;}
-        .info-box {border-left: 5px solid #0B5D1E; background: #F0FAF3; padding: 1rem; border-radius: 0.5rem;}
+        .section-title {font-size: 1.3rem; font-weight: 750; color: #0B3D91; margin-top: 1rem;}
+        .info-box {border-left: 5px solid #2563EB; background: #EFF6FF; padding: 1rem; border-radius: 0.5rem;}
         .warning-box {border-left: 5px solid #B7791F; background: #FFF8E5; padding: 1rem; border-radius: 0.5rem;}
         .danger-box {border-left: 5px solid #C53030; background: #FFF5F5; padding: 1rem; border-radius: 0.5rem;}
         div[data-testid="stMetricValue"] {font-size: 1.8rem;}
@@ -46,7 +46,7 @@ def status_badge(status: str) -> str:
     status = str(status)
     color = "#718096"
     if status in {"Low", "On target", "Completed", "Stable", "Normal", "Delivered"}:
-        color = "#0B5D1E"
+        color = "#2563EB"
     elif status in {"Medium", "Improved", "Warning", "Pending", "In Transit"}:
         color = "#B7791F"
     elif status in {"High", "Critical", "Issue", "Delayed"}:

@@ -82,3 +82,6 @@ Notes:
 ## Flexible incident input update
 
 The Add New Order page supports a broader incident list and `Other / custom input` for incident type and affected process. This allows users to enter unexpected logistics exceptions such as abnormal temperature rise, reefer malfunction, IT downtime, supplier delay, weather disruption, or any custom operational issue.
+
+
+Latest update: dashboard data adjusted to Fill Rate 97.0% and Cold Damage Rate 1.2%, with the web theme converted to professional blue.
