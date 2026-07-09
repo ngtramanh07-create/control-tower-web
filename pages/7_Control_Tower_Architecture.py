@@ -1,5 +1,5 @@
 import streamlit as st
-from utils.ui import inject_css, page_header, blue_table
+from utils.ui import inject_css, title, section, blue_table
 from utils.data_loader import load_sheet
 
 st.set_page_config(page_title="Control Tower Architecture", page_icon="ARCH", layout="wide")
@@ -21,7 +21,7 @@ st.markdown(
 section("8-layer model")
 try:
     layers = load_sheet("Control_Tower_Layers")
-    blue_table(layer_df)
+    blue_table(layers)
 except Exception:
     st.warning("Control_Tower_Layers sheet is not available.")
 
@@ -78,6 +78,6 @@ st.markdown(
 section("Decision rules")
 try:
     rules = load_sheet("Decision_Rules")
-    st.dataframe(rules, use_container_width=True, height=360)
+    blue_table(rules)
 except Exception:
     st.warning("Decision_Rules sheet is not available.")
