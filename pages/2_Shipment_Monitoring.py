@@ -1,6 +1,6 @@
 import streamlit as st
 import plotly.express as px
-from utils.ui import inject_css, title, section, dataframe_download
+from utils.ui import inject_css, title, section, dataframe_download, blue_table
 from utils.data_loader import load_orders, filter_orders, safe_unique
 
 st.set_page_config(page_title="Shipment Monitoring", page_icon="SHIP", layout="wide")
@@ -36,7 +36,7 @@ columns = [
     "Delay_Risk", "Temperature_Status", "Document_Risk", "Shipment_Status", "Recommended_Action",
 ]
 columns = [c for c in columns if c in filtered.columns]
-st.dataframe(filtered[columns], use_container_width=True, height=520)
+blue_table(filtered[columns], max_height=520)
 dataframe_download(filtered[columns], "Download filtered shipments", "filtered_shipments.csv")
 
 section("Shipment distribution")
