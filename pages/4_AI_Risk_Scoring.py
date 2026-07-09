@@ -1,6 +1,6 @@
 import streamlit as st
 import plotly.express as px
-from utils.ui import inject_css, title, section
+from utils.ui import inject_css, title, section, blue_table
 from utils.data_loader import load_orders
 from utils.rules import severity_from_score
 
@@ -48,7 +48,7 @@ cols = [
     "Total_Risk_Score", "Recommended_Action",
 ]
 cols = [c for c in cols if c in df.columns]
-st.dataframe(df.sort_values("Total_Risk_Score", ascending=False)[cols].head(30), use_container_width=True)
+blue_table(df.sort_values("Total_Risk_Score", ascending=False)[cols].head(30), max_height=430)
 
 section("What-if risk simulation")
 st.caption("Use this simple simulation to explain how the Control Tower converts operational signals into a decision priority.")
