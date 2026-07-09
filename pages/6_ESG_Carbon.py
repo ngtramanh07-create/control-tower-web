@@ -77,7 +77,7 @@ if completeness_rows:
     comp = pd.DataFrame(completeness_rows)
     fig = px.bar(comp, x="Data Field", y="Completion Rate", title="Data completeness rate", text_auto=".1f")
     st.plotly_chart(fig, use_container_width=True)
-    st.dataframe(comp.round(2), use_container_width=True)
+    blue_table(completion_df)
 
 section("High-carbon shipment watchlist")
 watch = df[df["Carbon_Emission_kgCO2_tonkm"] > 0.61].copy() if "Carbon_Emission_kgCO2_tonkm" in df.columns else df.iloc[0:0].copy()
@@ -86,5 +86,5 @@ cols = [
     "Carbon_Emission_kgCO2_tonkm", "Carbon_Emission_Total_kgCO2e", "Recommended_Action",
 ]
 cols = [c for c in cols if c in watch.columns]
-st.dataframe(watch[cols].head(100), use_container_width=True, height=430)
+blue_table(completion_df)
 dataframe_download(watch[cols], "Download high-carbon watchlist", "high_carbon_watchlist.csv")
