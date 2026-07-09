@@ -86,5 +86,5 @@ cols = [
     "Carbon_Emission_kgCO2_tonkm", "Carbon_Emission_Total_kgCO2e", "Recommended_Action",
 ]
 cols = [c for c in cols if c in watch.columns]
-blue_table(completion_df)
+blue_table(watch[cols].head(100))
 dataframe_download(watch[cols], "Download high-carbon watchlist", "high_carbon_watchlist.csv")
