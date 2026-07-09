@@ -1,6 +1,6 @@
 import streamlit as st
 import plotly.express as px
-from utils.ui import inject_css, title, section, dataframe_download
+from utils.ui import inject_css, title, section, dataframe_download, blue_table
 from utils.data_loader import load_orders
 
 st.set_page_config(page_title="ESG & Carbon", page_icon="ESG", layout="wide")
@@ -77,7 +77,7 @@ if completeness_rows:
     comp = pd.DataFrame(completeness_rows)
     fig = px.bar(comp, x="Data Field", y="Completion Rate", title="Data completeness rate", text_auto=".1f")
     st.plotly_chart(fig, use_container_width=True)
-    blue_table(completion_df)
+    blue_table(comp.round(2))
 
 section("High-carbon shipment watchlist")
 watch = df[df["Carbon_Emission_kgCO2_tonkm"] > 0.61].copy() if "Carbon_Emission_kgCO2_tonkm" in df.columns else df.iloc[0:0].copy()
