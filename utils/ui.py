@@ -30,6 +30,7 @@ def inject_css():
             font-weight: 750;
             color: #0B3D91;
             margin-top: 1rem;
+            margin-bottom: 0.5rem;
         }
 
         .info-box {
@@ -64,7 +65,7 @@ def inject_css():
         .blue-table-wrap {
             border: 1px solid #D7E3F8;
             border-radius: 12px;
-            overflow-x: auto;
+            overflow: auto;
             margin: 0.75rem 0 1.25rem 0;
             background: white;
         }
@@ -86,6 +87,9 @@ def inject_css():
             text-align: left;
             border: 1px solid #D7E3F8;
             white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 2;
         }
 
         .blue-table-wrap td {
@@ -93,6 +97,7 @@ def inject_css():
             padding: 0.7rem 0.9rem;
             border: 1px solid #E5EAF3;
             vertical-align: top;
+            white-space: nowrap;
         }
 
         .blue-table-wrap tbody tr:nth-child(even) {
@@ -111,16 +116,27 @@ def inject_css():
 def title(text: str, subtitle: str = ""):
     st.title(text)
     if subtitle:
-        st.markdown(f"<div class='subtitle'>{subtitle}</div>", unsafe_allow_html=True)
+        st.markdown(
+            f"<div class='subtitle'>{subtitle}</div>",
+            unsafe_allow_html=True,
+        )
 
 
 def section(text: str):
-    st.markdown(f"<div class='section-title'>{text}</div>", unsafe_allow_html=True)
+    st.markdown(
+        f"<div class='section-title'>{text}</div>",
+        unsafe_allow_html=True,
+    )
 
 
 def dataframe_download(df: pd.DataFrame, label: str, file_name: str):
     csv = df.to_csv(index=False).encode("utf-8-sig")
-    st.download_button(label=label, data=csv, file_name=file_name, mime="text/csv")
+    st.download_button(
+        label=label,
+        data=csv,
+        file_name=file_name,
+        mime="text/csv",
+    )
 
 
 def status_badge(status: str) -> str:
@@ -140,7 +156,7 @@ def status_badge(status: str) -> str:
     )
 
 
-def safe_date_filter(df, column: str):
+def safe_date_filter(df: pd.DataFrame, column: str):
     if column not in df.columns or df[column].dropna().empty:
         return df
 
@@ -161,11 +177,31 @@ def safe_date_filter(df, column: str):
     return df
 
 
-def blue_table(df, hide_index=True):
+def blue_table(df: pd.DataFrame, hide_index: bool = True, max_height: int = 430):
+    if df is None:
+        st.info("No data available.")
+        return
+
+    if isinstance(df, pd.Series):
+        df = df.to_frame()
+
+    if df.empty:
+        empty_html = df.to_html(index=not hide_index, escape=False)
+        st.markdown(
+            f"""
+            <div class="blue-table-wrap" style="max-height:{max_height}px;">
+                {empty_html}
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        return
+
     html = df.to_html(index=not hide_index, escape=False)
+
     st.markdown(
         f"""
-        <div class="blue-table-wrap">
+        <div class="blue-table-wrap" style="max-height:{max_height}px;">
             {html}
         </div>
         """,
