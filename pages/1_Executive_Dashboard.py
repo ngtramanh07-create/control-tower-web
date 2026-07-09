@@ -1,7 +1,7 @@
 import streamlit as st
 import plotly.express as px
 import pandas as pd
-from utils.ui import inject_css, title, section
+from utils.ui import inject_css, title, section, blue_table
 from utils.data_loader import load_orders
 from utils.kpi_utils import (
     calculate_kpis,
@@ -105,4 +105,4 @@ with right:
         st.plotly_chart(fig, use_container_width=True)
 
 section("KPI details")
-st.dataframe(comparison, use_container_width=True)
+blue_table(comparison)
