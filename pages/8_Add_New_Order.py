@@ -4,7 +4,7 @@ from datetime import datetime, time, timedelta
 import pandas as pd
 import streamlit as st
 
-from utils.ui import inject_css, title, section, dataframe_download
+from utils.ui import inject_css, title, section, dataframe_download, blue_table
 from utils.data_loader import load_orders, append_order, reset_orders, get_added_order_count
 from utils.kpi_utils import calculate_kpis, kpi_comparison_frame
 from utils.rules import calculate_risk_score, severity_from_score, recommend_action
@@ -610,12 +610,12 @@ if submitted:
     c4.metric("New Carbon", f"{kpis_after['Carbon Emission']:.2f}", f"{kpis_after['Carbon Emission'] - kpis_before['Carbon Emission']:+.3f}", delta_color="inverse")
 
     section("New order decision output")
-    st.dataframe(pd.DataFrame([row]), use_container_width=True)
+    blue_table(pd.DataFrame([row]), max_height=240)
 
 section("Active dataset after new inputs")
 active = load_orders()
 st.caption("The added orders are stored in the current Streamlit session. Use Download if you want to save the updated dataset.")
-st.dataframe(active.tail(20), use_container_width=True, height=340)
+blue_table(active.tail(20), max_height=340)
 
 left, mid, right = st.columns(3)
 with left:
@@ -637,4 +637,4 @@ with right:
     )
 
 section("KPI after all active orders")
-st.dataframe(kpi_comparison_frame(calculate_kpis(active)), use_container_width=True)
+blue_table(kpi_comparison_frame(calculate_kpis(active)), max_height=360)
