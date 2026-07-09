@@ -185,19 +185,10 @@ def blue_table(df: pd.DataFrame, hide_index: bool = True, max_height: int = 430)
     if isinstance(df, pd.Series):
         df = df.to_frame()
 
-    if df.empty:
-        empty_html = df.to_html(index=not hide_index, escape=False)
-        st.markdown(
-            f"""
-            <div class="blue-table-wrap" style="max-height:{max_height}px;">
-                {empty_html}
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        return
+    display_df = df.copy()
+    display_df = display_df.fillna("None")
 
-    html = df.to_html(index=not hide_index, escape=False)
+    html = display_df.to_html(index=not hide_index, escape=False)
 
     st.markdown(
         f"""
